@@ -147,7 +147,7 @@ class CodeActionsManager:
                         matching_kinds = get_matching_kinds(on_save_actions, supported_kinds or [])
                         if matching_kinds:
                             params = text_document_code_action_params(
-                                view, file_name, request_range, [], matching_kinds)
+                                session.config, file_name, request_range, [], matching_kinds)
                             request = Request.codeAction(params, view)
                             session.send_request(
                                 request, *filtering_collector(session.config.name, matching_kinds, collector))
@@ -156,7 +156,7 @@ class CodeActionsManager:
                         diagnostics = diagnostics_by_config.get(config_name, [])
                         if only_with_diagnostics and not diagnostics:
                             continue
-                        params = text_document_code_action_params(view, file_name, request_range, diagnostics)
+                        params = text_document_code_action_params(session.config, file_name, request_range, diagnostics)
                         request = Request.codeAction(params, view)
                         session.send_request(request, collector.create_collector(config_name))
         if use_cache:

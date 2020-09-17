@@ -226,11 +226,9 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
                     result.extend(data.panel_contribution)
         return result
 
-    def diagnostics_async(self) -> Dict[str, List[Diagnostic]]:
-        result = {}  # type: Dict[str, List[Diagnostic]]
-        for sv in self.session_views_async():
-            result[sv.session.config.name] = sv.get_diagnostics_async()
-        return result
+    def diagnostics_async(self) -> Generator[Tuple[Session, List[Diagnostic]], None, None]:
+        for sb in self.session_buffers_async():
+            yield sb.session, sb.diagnostics
 
     def on_diagnostics_updated_async(self) -> None:
         self._clear_code_actions_annotation()
@@ -379,7 +377,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         last_char = previous_non_whitespace_char(self.view, pos)
         if manual or last_char in triggers:
             self.purge_changes_async()
-            params = text_document_position_params(self.view, pos)
+            params = text_document_position_params(session.config, self.view, pos)
             assert session
             session.send_request(
                 Request.signatureHelp(params, self.view), lambda resp: self._on_signature_help(resp, pos))
@@ -471,7 +469,8 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         session = self.session("colorProvider")
         if session:
             session.send_request(
-                Request.documentColor(document_color_params(self.view), self.view), self._on_color_boxes)
+                Request.documentColor(
+                    document_color_params(session.config, self.view), self.view), self._on_color_boxes)
 
     def _on_color_boxes(self, response: Any) -> None:
         color_infos = response if response else []
@@ -497,7 +496,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         point = self.view.sel()[0].b
         session = self.session("documentHighlightProvider", point)
         if session:
-            params = text_document_position_params(self.view, point)
+            params = text_document_position_params(session.config, self.view, point)
             request = Request.documentHighlight(params, self.view)
             session.send_request(request, self._on_highlights)
 
@@ -532,7 +531,7 @@ class DocumentSyncListener(sublime_plugin.ViewEventListener, AbstractViewListene
         can_resolve_completion_items = bool(session.get_capability('completionProvider.resolveProvider'))
         config_name = session.config.name
         session.send_request(
-            Request.complete(text_document_position_params(self.view, location), self.view),
+            Request.complete(text_document_position_params(session.config, self.view, location), self.view),
             lambda res: self._on_complete_result(res, promise, can_resolve_completion_items, config_name),
             lambda res: self._on_complete_error(res, promise))
 

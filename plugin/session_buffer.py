@@ -97,12 +97,12 @@ class SessionBuffer:
 
     def _check_did_open(self, view: sublime.View) -> None:
         if not self.opened and self.should_notify_did_open():
-            self.session.send_notification(did_open(view, self.language_id))
+            self.session.send_notification(did_open(self.session.config, view, self.language_id))
             self.opened = True
 
     def _check_did_close(self) -> None:
         if self.opened and self.should_notify_did_close():
-            self.session.send_notification(did_close(self.file_name))
+            self.session.send_notification(did_close(self.session.config, self.file_name))
             self.opened = False
 
     def add_session_view(self, sv: SessionViewProtocol) -> None:
@@ -194,7 +194,7 @@ class SessionBuffer:
 
     def on_revert_async(self, view: sublime.View) -> None:
         self.pending_changes = None  # Don't bother with pending changes
-        self.session.send_notification(did_change(view, None))
+        self.session.send_notification(did_change(self.session.config, view, None))
 
     on_reload_async = on_revert_async
 
@@ -204,7 +204,7 @@ class SessionBuffer:
             if sync_kind == TextDocumentSyncKindNone:
                 return
             c = None if sync_kind == TextDocumentSyncKindFull else self.pending_changes.changes
-            notification = did_change(view, c)
+            notification = did_change(self.session.config, view, c)
             self.session.send_notification(notification)
             self.pending_changes = None
 
@@ -212,7 +212,7 @@ class SessionBuffer:
         if self.should_notify_will_save():
             self.purge_changes_async(view)
             # TextDocumentSaveReason.Manual
-            self.session.send_notification(will_save(old_file_name, 1))
+            self.session.send_notification(will_save(self.session.config, old_file_name, 1))
 
     def on_post_save_async(self, view: sublime.View) -> None:
         file_name = view.file_name()
@@ -225,7 +225,7 @@ class SessionBuffer:
             if send_did_save:
                 self.purge_changes_async(view)
                 # mypy: expected sublime.View, got ViewLike
-                self.session.send_notification(did_save(view, include_text, self.file_name))
+                self.session.send_notification(did_save(self.session.config, view, include_text, self.file_name))
         if userprefs().show_diagnostics_panel_on_save():
             if self.should_show_diagnostics_panel:
                 mgr = self.session.manager()

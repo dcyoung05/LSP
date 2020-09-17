@@ -9,8 +9,8 @@ from .core.registry import LspTextCommand
 from .core.registry import windows
 from .core.settings import PLUGIN_NAME
 from .core.settings import userprefs
+from .core.types import ClientConfig
 from .core.typing import List, Dict, Optional, Tuple, TypedDict
-from .core.url import uri_to_filename
 from .core.views import get_line, text_document_position_params
 from .documents import is_at_word
 
@@ -56,9 +56,9 @@ class LspSymbolReferencesCommand(LspTextCommand):
             document_position = text_document_position_params(self.view, pos)
             document_position['context'] = {"includeDeclaration": False}
             request = Request.references(document_position, self.view)
-            session.send_request(request, lambda response: self.handle_response(response, pos))
+            session.send_request(request, lambda response: self.handle_response(session.config, response, pos))
 
-    def handle_response(self, response: Optional[List[ReferenceDict]], pos: int) -> None:
+    def handle_response(self, config: ClientConfig, response: Optional[List[ReferenceDict]], pos: int) -> None:
         window = self.view.window()
 
         if response is None:
@@ -72,7 +72,7 @@ class LspSymbolReferencesCommand(LspTextCommand):
                 window.status_message("No references found")
                 return
 
-            references_by_file = self._group_references_by_file(response)
+            references_by_file = self._group_references_by_file(config, response)
 
             if userprefs().show_references_in_quick_panel:
                 self.show_quick_panel(references_by_file)
@@ -164,12 +164,15 @@ class LspSymbolReferencesCommand(LspTextCommand):
             return os.path.join(self.base_dir, file_path)
         return file_path
 
-    def _group_references_by_file(self, references: List[ReferenceDict]
-                                  ) -> Dict[str, List[Tuple[Point, str]]]:
+    def _group_references_by_file(
+        self,
+        config: ClientConfig,
+        references: List[ReferenceDict]
+    ) -> Dict[str, List[Tuple[Point, str]]]:
         """ Return a dictionary that groups references by the file it belongs. """
         grouped_references = {}  # type: Dict[str, List[Tuple[Point, str]]]
         for reference in references:
-            file_path = uri_to_filename(reference["uri"])
+            file_path = config.map_from_remote_to_local(reference["uri"])
             point = Point.from_lsp(reference['range']['start'])
 
             # get line of the reference, to showcase its use

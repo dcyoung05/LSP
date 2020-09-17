@@ -1,6 +1,4 @@
 from .typing import Any, List, Dict, Optional, Union, Mapping, Iterable
-from .url import filename_to_uri
-from .url import uri_to_filename
 import os
 import sublime
 
@@ -310,14 +308,14 @@ class Range(object):
 
 
 class Location(object):
-    def __init__(self, file_path: str, range: Range) -> None:
-        self.file_path = file_path
+    def __init__(self, uri: str, range: Range) -> None:
+        self.uri = uri
         self.range = range
 
     @classmethod
     def from_lsp(cls, lsp_location: dict) -> 'Location':
         return Location(
-            uri_to_filename(lsp_location["uri"]),
+            lsp_location["uri"],
             Range.from_lsp(lsp_location["range"])
         )
 
@@ -370,35 +368,3 @@ class Diagnostic(object):
     def __repr__(self) -> str:
         return str(self.range) + ":" + self.message
 
-
-class WorkspaceFolder:
-
-    __slots__ = ('name', 'path')
-
-    def __init__(self, name: str, path: str) -> None:
-        self.name = name
-        self.path = path
-
-    @classmethod
-    def from_path(cls, path: str) -> 'WorkspaceFolder':
-        return cls(os.path.basename(path) or path, path)
-
-    def __repr__(self) -> str:
-        return "{}('{}', '{}')".format(self.__class__.__name__, self.name, self.path)
-
-    def __str__(self) -> str:
-        return self.path
-
-    def __eq__(self, other: Any) -> bool:
-        if isinstance(other, WorkspaceFolder):
-            return self.name == other.name and self.path == other.path
-        return False
-
-    def to_lsp(self) -> Dict[str, str]:
-        return {"name": self.name, "uri": self.uri()}
-
-    def uri(self) -> str:
-        return filename_to_uri(self.path)
-
-    def includes_uri(self, uri: str) -> bool:
-        return uri.startswith(self.uri())

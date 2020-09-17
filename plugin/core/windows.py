@@ -60,7 +60,7 @@ class AbstractViewListener(metaclass=ABCMeta):
         raise NotImplementedError()
 
     @abstractmethod
-    def diagnostics_async(self) -> Dict[str, List[Diagnostic]]:
+    def diagnostics_async(self) -> Iterable[Tuple[Session, List[Diagnostic]]]:
         raise NotImplementedError()
 
     @abstractmethod

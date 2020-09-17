@@ -98,6 +98,25 @@
               ],
               "additionalProperties": false
             },
+            "PathMap": {
+              "type": "object",
+              "description": "A mapping from your local filesystem to a remote filesystem. This can be used to talk to servers running inside docker containers, or running on a remote machine.",
+              "properties": {
+                "local": {
+                  "type": "string",
+                  "description": "The local path where you want to map from."
+                },
+                "remote": {
+                  "type": "string",
+                  "description": "The remote path where you want your local prefix to map to"
+                }
+              },
+              "required": [
+                "local",
+                "remote"
+              ],
+              "additionalProperties": false
+            },
             // The ClientConfig class
             "ClientConfig": {
               "type": "object",
@@ -132,6 +151,18 @@
                 },
                 "env": {
                   "$ref": "#/definitions/ClientEnv"
+                },
+                "path_maps": {
+                  "type": "array",
+                  "items": {
+                    "$ref": "#/definitions/PathMap"
+                  },
+                  "defaultSnippets": [
+                    {
+                      "markdownDescription": "Insert a scaffolding path map",
+                      "body": [{"local": "${1:/local/path}", "remote": "${2:/workspace}"}]
+                    }
+                  ]
                 },
                 "languageId": {
                   "$ref": "#/definitions/useLanguagesInstead"
